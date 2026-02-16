@@ -3,13 +3,13 @@ import mediapipe as mp
 import math
 import time
 import pyautogui
-from collections import deque
+
 
 class GestureController:
     def __init__(self):
         # MediaPipe Setup
         self.mp_hands = mp.solutions.hands
-        self.mp_face = mp.solutions.face_mesh
+        # self.mp_face = mp.solutions.face_mesh
         self.mp_draw = mp.solutions.drawing_utils
 
         # Initialize Models
@@ -18,17 +18,17 @@ class GestureController:
             min_detection_confidence=0.7,
             min_tracking_confidence=0.7
         )
-        self.face_mesh = self.mp_face.FaceMesh(
-            max_num_faces=1,
-            refine_landmarks=True,
-            min_detection_confidence=0.7,
-            min_tracking_confidence=0.7
-        )
+        # self.face_mesh = self.mp_face.FaceMesh(
+        #     max_num_faces=1,
+        #     refine_landmarks=True,
+        #     min_detection_confidence=0.7,
+        #     min_tracking_confidence=0.7
+        # )
 
         # =====================================================
         # TIMING & COOLDOWN CONFIGURATION (The Fix)
         # =====================================================
-        self.active = False
+        # self.active = False
         
         # 1. Post-Action Cooldown: How long to wait AFTER an action (prevents spam)
         self.last_action_time = 0
@@ -41,27 +41,27 @@ class GestureController:
         self.gesture_start_time = 0
 
         # Blink Variables
-        self.blink_timestamps = []
-        self.EAR_THRESHOLD = 0.22
-        self.BLINK_WINDOW = 3.0
+        # self.blink_timestamps = []
+        # self.EAR_THRESHOLD = 0.22
+        # self.BLINK_WINDOW = 3.0
 
         # Pinch Config
         self.last_pinch_x = None
         self.PINCH_THRESHOLD = 0.04
         self.PINCH_MOVE_THRESHOLD = 0.03
 
-        # Indices
-        self.LEFT_EYE = [33, 160, 158, 133, 153, 144]
-        self.RIGHT_EYE = [362, 385, 387, 263, 373, 380]
+        # # Indices
+        # self.LEFT_EYE = [33, 160, 158, 133, 153, 144]
+        # self.RIGHT_EYE = [362, 385, 387, 263, 373, 380]
 
-    def _euclid(self, p1, p2):
-        return math.hypot(p1.x - p2.x, p1.y - p2.y)
+    # def _euclid(self, p1, p2):
+    #     return math.hypot(p1.x - p2.x, p1.y - p2.y)
 
-    def _get_ear(self, landmarks, eye_indices):
-        a = self._euclid(landmarks[eye_indices[1]], landmarks[eye_indices[5]])
-        b = self._euclid(landmarks[eye_indices[2]], landmarks[eye_indices[4]])
-        c = self._euclid(landmarks[eye_indices[0]], landmarks[eye_indices[3]])
-        return (a + b) / (2.0 * c)
+    # def _get_ear(self, landmarks, eye_indices):
+    #     a = self._euclid(landmarks[eye_indices[1]], landmarks[eye_indices[5]])
+    #     b = self._euclid(landmarks[eye_indices[2]], landmarks[eye_indices[4]])
+    #     c = self._euclid(landmarks[eye_indices[0]], landmarks[eye_indices[3]])
+    #     return (a + b) / (2.0 * c)
 
     def _count_fingers(self, landmarks, label):
         lm = landmarks.landmark
@@ -76,40 +76,40 @@ class GestureController:
 
     def process(self, frame):
         # Preprocessing
-        frame = cv2.flip(frame, 1)
+        # frame = cv2.flip(frame, 1)
         h, w, _ = frame.shape
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         
         hand_result = self.hands.process(rgb)
-        face_result = self.face_mesh.process(rgb)
+        # face_result = self.face_mesh.process(rgb)
 
         # -----------------------------------------------------
         # 1. BLINK TOGGLE
         # -----------------------------------------------------
-        if face_result.multi_face_landmarks:
-            mesh = face_result.multi_face_landmarks[0].landmark
-            ear_avg = (self._get_ear(mesh, self.LEFT_EYE) + 
-                       self._get_ear(mesh, self.RIGHT_EYE)) / 2.0
+        # if face_result.multi_face_landmarks:
+        #     mesh = face_result.multi_face_landmarks[0].landmark
+        #     ear_avg = (self._get_ear(mesh, self.LEFT_EYE) + 
+        #                self._get_ear(mesh, self.RIGHT_EYE)) / 2.0
             
-            if ear_avg < self.EAR_THRESHOLD:
-                self.blink_timestamps.append(time.time())
+        #     if ear_avg < self.EAR_THRESHOLD:
+        #         self.blink_timestamps.append(time.time())
                 
-            now = time.time()
-            self.blink_timestamps = [t for t in self.blink_timestamps if now - t < self.BLINK_WINDOW]
+        #     now = time.time()
+        #     self.blink_timestamps = [t for t in self.blink_timestamps if now - t < self.BLINK_WINDOW]
             
-            if len(self.blink_timestamps) >= 3:
-                self.active = not self.active
-                self.blink_timestamps = []
-                cv2.putText(frame, "SYSTEM TOGGLED", (w//2 - 100, h//2), 
-                            cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 3)
-                time.sleep(0.5) 
+        #     if len(self.blink_timestamps) >= 3:
+        #         self.active = not self.active
+        #         self.blink_timestamps = []
+        #         cv2.putText(frame, "SYSTEM TOGGLED", (w//2 - 100, h//2), 
+        #                     cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 255), 3)
+        #         time.sleep(0.5) 
 
         # -----------------------------------------------------
         # 2. HAND GESTURES
         # -----------------------------------------------------
         current_time = time.time()
         
-        if self.active and hand_result.multi_hand_landmarks:
+        if hand_result.multi_hand_landmarks:
             for idx, hand_landmarks in enumerate(hand_result.multi_hand_landmarks):
                 self.mp_draw.draw_landmarks(frame, hand_landmarks, self.mp_hands.HAND_CONNECTIONS)
                 
@@ -170,6 +170,8 @@ class GestureController:
                             elif fingers == 0: action = "volumedown"
                             elif fingers == 2: action = "nexttrack"
                             elif fingers == 3: action = "prevtrack"
+                            elif fingers == 4: action = "volumemute"
+
                             
                             if action:
                                 pyautogui.press(action)
@@ -183,8 +185,8 @@ class GestureController:
                                 self.gesture_start_time = current_time 
 
         # Status Overlay
-        status_text = "ACTIVE" if self.active else "PAUSED"
-        color = (0, 255, 0) if self.active else (0, 0, 255)
-        cv2.putText(frame, f"Status: {status_text}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+        cv2.putText(frame, "Status: ACTIVE", (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+
         
         return frame
